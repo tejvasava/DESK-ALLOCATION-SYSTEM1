@@ -1,0 +1,9 @@
+FROM openjdk:11
+
+ARG JAR_FILE=target/*.jar
+
+COPY ${JAR_FILE} EUREKA-SERVICE.jar
+
+ENTRYPOINT ["java" ,"-jar", "/EUREKA-SERVICE.jar" ]
+
+EXPOSE 8761

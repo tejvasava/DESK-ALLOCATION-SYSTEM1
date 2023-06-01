@@ -1,0 +1,118 @@
+version: '3'
+services:
+  mysqldb:
+    image: 'mysql'
+    container_name: mysqldb
+    volumes:
+      - data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - '3307:3306'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://eureka-service:3306/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  eureka-service:
+    image: 'tejvasava/eureka-service:latest'
+    container_name: eureka-service
+    ports:
+      - '8761:8761'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://eureka-service:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  cloud-config:
+    image: 'tejvasava/cloud-config:latest'
+    container_name: cloud-config-container
+    ports:
+      - '9296:9296'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://cloud-config-container:9296/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - eureka-service
+  api-gateway:
+    image: 'tejvasava/api-gateway:latest'
+    container_name: api-gateway-container
+    ports:
+      - '9090:9090'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+  desk-service:
+    image: 'tejvasava/desk-service:latest'
+    container_name: desk-service-container
+    ports:
+      - '8084:8084'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container
+     #- DB_HOST=mysqldb 
+      - SPRING.DATASOURCE.URL=jdbc:mysql://mysqldb:3306/DESKDB?createDatabaseIfNotExist=true
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+  floor-service:
+    image: 'tejvasava/floor-service:latest'
+    container_name: floor-service-container
+    ports:
+      - '8083:8083'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container 
+     #- DB_HOST=mysqldb
+      - SPRING.DATASOURCE.URL=jdbc:mysql://mysqldb:3306/FLOORDB?createDatabaseIfNotExist=true
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+  office-service:
+    image: 'tejvasava/office-service:latest'
+    container_name: office-service-container
+    ports:
+      - '8085:8085'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container 
+     #- DB_HOST=mysqldb 
+      - SPRING.DATASOURCE.URL=jdbc:mysql://mysqldb:3306/OFFICEDB?createDatabaseIfNotExist=true
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+  organization-service:
+    image: 'tejvasava/organization-service:latest'
+    container_name: organization-service-container
+    ports:
+      - '8082:8082'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container 
+     #- DB_HOST=mysqldb 
+      - SPRING.DATASOURCE.URL=jdbc:mysql://mysqldb:3306/ORGDB?createDatabaseIfNotExist=true
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+  user-service:
+    image: 'tejvasava/user-service:latest'
+    container_name: user-service-container
+    ports:
+      - '8081:8081'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka
+      - CLOUD_CONFIG_URL=cloud-config-container
+     #- DB_HOST=mysqldb 
+      - SPRING.DATASOURCE.URL=jdbc:mysql://mysqldb:3306/USERDB?createDatabaseIfNotExist=true
+    depends_on:
+      cloud-config:
+        condition: service_healthy
+volumes:
+   data:

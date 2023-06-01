@@ -1,0 +1,68 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: API-GATEWAY
+  config:
+    import: configserver:http://${CLOUD_CONFIG_URL:localhost}:9296
+  cloud:
+    gateway:
+      routes:
+        - id: ORGANIZATION-SERVICE
+          uri: lb://ORGANIZATION-SERVICE
+          predicates:
+            - Path=/Orgnization/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: ORGANIZATION-SERVICE
+                fallbackuri: forward:/organizationServiceFallBack
+        - id: USER-SERVICE
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/user/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: USER-SERVICE
+                fallbackuri: forward:/userServiceFallBack
+        - id: FLOOR-SERVICE
+          uri: lb://FLOOR-SERVICE
+          predicates:
+            - Path=/floor/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: FLOOR-SERVICE
+                fallbackuri: forward:/floorServiceFallBack
+        - id: DESK-SERVICE
+          uri: lb://DESK-SERVICE
+          predicates:
+           - Path=/desk/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: DESK-SERVICE
+                fallbackuri: forward:/deskServiceFallBack
+        - id: OFFICE-SERVICE
+          uri: lb://OFFICE-SERVICE
+          predicates:
+          - Path=/office/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: OFFICE-SERVICE
+                fallbackuri: forward:/officeServiceFallBack
+jwt:
+   secret-key: secretkey
+   expire-length: 300000 # 5 minutes duration by default: 5 minutes * 60 seconds * 1000 miliseconds
+      
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: ${EUREKA_SERVER_ADDRESS:http://localhost:8761/eureka}             

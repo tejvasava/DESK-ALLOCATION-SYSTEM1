@@ -1,0 +1,87 @@
+1. docker network create deskallot-mysql
+
+2. We will use the image[my-sql] provided by dockerhub to run as container. Also we will specify following when running the container
+	a. name of the mysql container
+	a. What should be the password for MYSQL
+	b. We want to create the Database named USERDB.
+	c. specify the network deskallot-mysql on which this container should be created.
+	d. start the container in detached mode.
+	
+3. docker container run -e MYSQL_URL=mysqldb --network deskallot-mysql --name user-service-container -p 8081:8081 -d tejvasava/user-service
+	
+	Open work bench: localhost port 3307 and test connection ( it will done after mysql is up)
+
+4. Next let us check if container has started correctly using logs command.
+	
+	docker container logs -f <key>
+	
+5. Using the exec command we can also inspect if the database named USERDB is created successfully.
+	
+	docker container exec -it <key> bash
+	
+	 mysql -uroot -proot
+	
+6. Next we will modify the application.properties in the Spring Boot application to make use of the mysql container name i.e.mysqldb instead of localhost.
+	
+	spring.datasource.url=jdbc:mysql://mysqldb/USERDB
+	
+	docker inspect mysqldb
+	
+7. Build the docker image for the spring boot project
+	
+	docker image build -t tejvasava/user-service .
+	
+8. Next run this as a container. Also we are running the container on the deskallot-mysql network.
+
+	docker container run --network deskallot-mysql --name user-service-container -p 8081:8081 -d tejvasava/user-service
+	
+9. Both our containers have started successfully. Let us insert data with POST request using curl-command
+
+	curl --header "Content-Type: application/json"   --request POST   --data '{ "userRole":"2","username":"Anju","password":"anjana","email":"anjana@gmail.com","name":"anjana","phoneNo":"8320365474","status":"true","organizationId":"1","deskId":"1","floorId":"1"}' http://localhost:8081/user/add
+
+=========================================================================
+
+To build image: [EUREKA-SERVICE]
+	docker image build -t tejvasava/eureka-service .
+
+	docker run --network deskallot-mysql -d  -p 8761:8761 --name eureka-service -d tejvasava/eureka-service 
+
+To build image: [CLOUD-CONFIG]
+	docker image build -t tejvasava/cloud-config .
+
+	docker run -d -p 9296:9296 -e EUREKA_SERVER_ADDRESS=http://host.docker.internal:8761/eureka --name cloud-config-container tejvasava/cloud-config
+
+
+To build image: [API -GATEWAY ]
+	docker image build -t tejvasava/api-gateway .        //mvn install -Dmaven.test.skip=true
+	
+	docker run --network deskallot-mysql -d -p9090:9090 -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka --name api-gateway-container tejvasava/api-gateway
+	
+	
+To build image: [DESK-SERVICE]
+	docker image build -t tejvasava/desk-service .
+
+	
+	docker run -d -p8084:8084  -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka -e DB_HOST=mysqldb --network deskallot-mysql  --name desk-service-container tejvasava/desk-service
+	
+
+To build image: [FLOOR -SERVICE ]
+	docker image build -t tejvasava/floor-service .
+
+	docker run -d -p8083:8083  -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka -e DB_HOST=mysqldb --network deskallot-mysql  --name floor-service-container tejvasava/floor-service
+
+To build image: [ OFFICE-SERVICE ]
+	docker image build -t tejvasava/office-service .
+
+	docker run -d -p8085:8085  -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka -e DB_HOST=mysqldb --network deskallot-mysql  --name office-service-container tejvasava/office-service
+	
+To build image: [ORGANIZATION-SERVICE ]
+	docker image build -t tejvasava/organization-service .
+	
+	docker run -d -p8082:8082  -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka -e DB_HOST=mysqldb --network deskallot-mysql  --name organization-service-container tejvasava/organization-service
+	
+To build image: [ USER-SERVICE ]
+	docker image build -t tejvasava/user-service .
+	
+	docker run -d -p8081:8081  -e CLOUD_CONFIG_URL=host.docker.internal -e EUREKA_SERVER_ADDRESS=http://eureka-service:8761/eureka -e DB_HOST=mysqldb --network deskallot-mysql  --name user-service-container tejvasava/user-service
+	
